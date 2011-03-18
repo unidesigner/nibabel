@@ -9,7 +9,7 @@
 
 import base64
 import zlib
-from StringIO import StringIO
+from io	import StringIO
 from xml.parsers.expat import ParserCreate, ExpatError
 
 import numpy as np
@@ -41,7 +41,7 @@ def read_data_block(encoding, endian, ordering, datatype, shape, data):
 
     elif encoding == 2:
         # GIFTI_ENCODING_B64BIN
-        dec = base64.decodestring(data)
+        dec = base64.decodestring(data.encode('ascii'))
         dt = data_type_codes.type[datatype]
         sh = tuple(shape)
         newarr = np.fromstring(zdec, dtype = dt, sep = '\n', count = c)
@@ -52,7 +52,9 @@ def read_data_block(encoding, endian, ordering, datatype, shape, data):
 
     elif encoding == 3:
         # GIFTI_ENCODING_B64GZ
-        dec = base64.decodestring(data)
+        # convert to bytes array for python 3.2
+        # http://diveintopython3.org/strings.html#byte-arrays
+        dec = base64.decodestring(data.encode('ascii'))
         zdec = zlib.decompress(dec)
         dt = data_type_codes.type[datatype]
         sh = tuple(shape)
@@ -96,7 +98,7 @@ class Outputter(object):
     
     def StartElementHandler(self, name, attrs):
         if DEBUG_PRINT:
-            print 'Start element:\n\t', repr(name), attrs
+            print('Start element:\n\t', repr(name), attrs)
         
         if name == 'GIFTI':
             # create gifti image
@@ -213,7 +215,7 @@ class Outputter(object):
 
     def EndElementHandler(self, name):
         if DEBUG_PRINT:
-            print 'End element:\n\t', repr(name)
+            print('End element:\n\t', repr(name))
 
         if name == 'GIFTI':
             # remove last element of the list
@@ -292,7 +294,6 @@ class Outputter(object):
             self.coordsys.xformspace = xform_codes.code[data]
         elif self.write_to == 'MatrixData':
             # conversion to numpy array
-            from StringIO import StringIO
             c = StringIO(data)
             self.coordsys.xform = np.loadtxt(c)
             c.close()
@@ -307,7 +308,7 @@ class Outputter(object):
 
 def parse_gifti_file(fname, buffer_size = 35000000):
 
-    datasource = open(fname,'r')
+    datasource = open(fname,'rb')
     
     parser = ParserCreate()
     parser.buffer_text = True
@@ -323,7 +324,7 @@ def parse_gifti_file(fname, buffer_size = 35000000):
     try:
         parser.ParseFile(datasource)
     except ExpatError:
-        print 'An expat error occured while parsing the  Gifti file.'
+        print('An expat error occured while parsing the  Gifti file.')
 
     # update filename
     out.img.filename = fname
